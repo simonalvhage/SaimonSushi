@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Saimon Sushi</title>
+  <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body>
+<div class="container">
+  <center><h1>Saimon Sushi Meny</h1></center>
+  <div class="row justify-content-center" id="menuItems">
+    <!-- Menyobjekt läggs till här dynamiskt -->
+  </div>
+</div>
+
+<!-- Button to trigger modal -->
+<div class="container">
+  <button type="button" class="btn btn-primary mt-3" data-toggle="modal" data-target="#orderModal">
+    Skicka till köket!
+  </button>
+</div>
+
+<!-- Modal -->
+<div class="modal fade" id="orderModal" tabindex="-1" role="dialog" aria-labelledby="orderModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="orderModalLabel">Ange bordnummer</h5>
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body">
+        <input type="text" id="tableNumber" class="form-control" placeholder="Ange bordnummer">
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-dismiss="modal">Stäng</button>
+        <button type="button" class="btn btn-primary" onclick="submitForm()">Skicka beställning</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.4/dist/umd/popper.min.js"></script>
+<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+<script>
+  $(document).ready(function(){
+    // Hämta menyobjekt från servern
+    fetch('get_menu.php')
+      .then(response => response.json())
+      .then(data => {
+        // Rendera varje menyobjekt
+        data.forEach(item => {
+          var menuItem = `
+            <div class="col-md-6">
+              <div class="list-group-item">
+                <div class="d-flex w-100 justify-content-between align-items-center">
+                  <img src="${item.image_url}" alt="Image" class="img-fluid mr-3" style="max-width: 100px;">
+                  <div>
+                    <h5 class="mb-1">${item.heading}</h5>
+                    <p class="mb-1">${item.text}</p>
+                    <small>${item.price}</small>
+                  </div>
+                  <div class="input-group">
+                    <div class="input-group-prepend">
+                      <button class="btn btn-outline-secondary minus-btn" type="button">-</button>
+                    </div>
+                    <input type="text" name="dish${item.id}" class="form-control text-center quantity" value="0">
+                    <div class="input-group-append">
+                      <button class="btn btn-outline-secondary plus-btn" type="button">+</button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          `;
+          $('#menuItems').append(menuItem);
+        });
+      });
+
+    // Öka antalet rätter när plus-knappen klickas
+    $(document).on('click', '.plus-btn', function() {
+      var input = $(this).closest('.input-group').find('input');
+      var value = parseInt(input.val());
+      input.val(value + 1);
+    });
+
+    // Minska antalet rätter när minus-knappen klickas
+    $(document).on('click', '.minus-btn', function() {
+      var input = $(this).closest('.input-group').find('input');
+      var value = parseInt(input.val());
+      if (value > 0) {
+        input.val(value - 1);
+      }
+    });
+  });
+
+  // Funktion för att skicka beställningen
+  function submitForm() {
+    var tableNumber = document.getElementById('tableNumber').value;
+    var dishes = [];
+    $('.quantity').each(function() {
+      var quantity = parseInt($(this).val());
+      if (quantity > 0) {
+        var dishId = $(this).attr('name').replace('dish', '');
+        dishes.push({ id: dishId, quantity: quantity });
+      }
+    });
+    if (tableNumber.trim() !== '' && dishes.length > 0) {
+    // Skapa en objekt som innehåller bordnummer och beställningar
+    var orderData = {
+        tableNumber: tableNumber,
+        dishes: dishes
+    };
+
+    // Skicka POST-förfrågan till servern med JSON-data
+    fetch('db_insert.php', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(orderData)
+    })
+    .then(response => {
+        if (response.ok) {
+            // Visa ett meddelande om beställningen har skickats framgångsrikt
+            alert('Beställning skickad!');
+        } else {
+            // Visa ett felmeddelande om det uppstod ett problem med att skicka beställningen
+            alert('Det uppstod ett fel vid skickande av beställningen.');
+        }
+    })
+    .catch(error => {
+        // Visa ett felmeddelande om det uppstod ett problem med att skicka förfrågan till servern
+        console.error('Error:', error);
+        alert('Det uppstod ett fel vid skickande av beställningen.');
+    });
+} else {
+    // Visa ett felmeddelande om bordnummer eller beställningar saknas
+    alert('Vänligen fyll i bordnummer och lägg till minst en beställning innan du skickar.');
+}
+
+  }
+</script>
+
+</body>
+</html>
